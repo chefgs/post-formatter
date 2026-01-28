@@ -22,7 +22,26 @@ app_css = Style("""
     button.tool-btn:hover { background: #eef3f8; border-color: var(--primary); color: var(--primary); }
     
     .editor-wrapper { background: #fafafa; position: relative; }
-    textarea { width: 100%; height: 320px; border: none; padding: 32px; font-size: 1.05rem; line-height: 1.6; outline: none; background: transparent; resize: none; font-family: inherit; }
+    
+    /* UPDATED TEXTAREA CSS */
+    textarea { 
+        width: 100%; 
+        height: 320px; 
+        border: none; 
+        padding: 32px; 
+        font-size: 1.05rem; 
+        line-height: 1.6; 
+        outline: none; 
+        background: transparent; 
+        font-family: inherit;
+        
+        /* Key changes for wrapping and scrolling */
+        resize: none;            /* Stops user from dragging size */
+        white-space: pre-wrap;   /* Wraps text to next line */
+        word-wrap: break-word;   /* Breaks very long words/URLs */
+        overflow-y: auto;        /* Adds vertical scrollbar */
+        overflow-x: hidden;      /* Hides horizontal scrollbar */
+    }
     
     .footer { padding: 16px 32px; background: #fff; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
     .btn-primary { background: var(--primary); color: white; border: none; padding: 12px 28px; border-radius: 30px; font-weight: 600; cursor: pointer; }
