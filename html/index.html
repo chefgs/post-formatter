@@ -22,10 +22,11 @@
             color: var(--text-main);
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start;
             min-height: 100vh;
             margin: 0;
             padding: 20px;
+            box-sizing: border-box;
         }
 
         .app-container {
@@ -139,14 +140,12 @@
             background: transparent;
             font-family: inherit;
             color: #333;
-            box-sizing: border-box; /* Ensures padding doesn't affect width */
-
-            /* SCROLL & WRAP UPDATES */
-            resize: none;           /* Prevents manual resizing */
-            white-space: pre-wrap;  /* Wraps text to next line */
-            word-wrap: break-word;  /* Breaks long words if necessary */
-            overflow-y: auto;       /* Vertical Scrollbar */
-            overflow-x: hidden;     /* Hides horizontal scrollbar */
+            box-sizing: border-box;
+            resize: none;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
 
         /* FOOTER */
@@ -157,6 +156,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 12px;
         }
 
         .stats {
@@ -164,6 +164,7 @@
             color: var(--text-sub);
             display: flex;
             gap: 15px;
+            flex-shrink: 0;
         }
 
         .btn-primary {
@@ -176,6 +177,7 @@
             font-size: 1rem;
             box-shadow: 0 4px 12px rgba(10, 102, 194, 0.2);
             cursor: pointer;
+            white-space: nowrap;
         }
 
         .btn-primary:hover {
@@ -199,6 +201,7 @@
             transition: all 0.3s ease;
             font-size: 0.9rem;
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            z-index: 2000;
         }
         .toast.visible {
             opacity: 1;
@@ -231,8 +234,15 @@
             overflow-y: auto;
             box-shadow: 0 10px 40px rgba(0,0,0,0.2);
         }
-        .emoji-modal-content h2 {
+        /* FIX: replaced float:right with flexbox for modal header */
+        .emoji-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin: 0 0 16px 0;
+        }
+        .emoji-modal-header h2 {
+            margin: 0;
             color: var(--primary);
             font-size: 1.2rem;
         }
@@ -256,25 +266,71 @@
             transform: scale(1.1);
         }
         .emoji-close-btn {
-            float: right;
             background: none;
             border: none;
             font-size: 1.5rem;
             cursor: pointer;
             color: #999;
             padding: 0;
+            line-height: 1;
+            flex-shrink: 0;
         }
         .emoji-close-btn:hover {
             color: #000;
         }
 
-        /* HELPER FOR MOBILE */
+        /* MOBILE RESPONSIVE */
         @media (max-width: 600px) {
-            .app-container { border-radius: 0; height: 100vh; max-width: 100%; border: none; }
-            .toolbar-group { padding: 10px; gap: 5px; justify-content: center; }
-            textarea { padding: 20px; font-size: 1rem; }
-            .header h1 { font-size: 1.2rem; }
-            .label { display: none; }
+            body {
+                padding: 0;
+                align-items: stretch;
+            }
+            .app-container {
+                border-radius: 0;
+                min-height: 100vh;
+                max-width: 100%;
+                border: none;
+            }
+            .toolbar-group {
+                padding: 10px;
+                gap: 5px;
+                justify-content: center;
+            }
+            textarea {
+                padding: 16px;
+                font-size: 1rem;
+                height: 280px;
+            }
+            .header {
+                padding: 16px;
+            }
+            .header h1 {
+                font-size: 1.1rem;
+            }
+            .header p {
+                font-size: 0.8rem;
+            }
+            .label {
+                display: none;
+            }
+            /* FIX: footer stacks vertically on mobile so Copy button is always visible */
+            .footer {
+                padding: 12px 16px;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            .stats {
+                justify-content: center;
+            }
+            .btn-primary {
+                width: 100%;
+                text-align: center;
+                justify-content: center;
+                padding: 14px 20px;
+                font-size: 1rem;
+                border-radius: 12px;
+            }
         }
     </style>
 </head>
@@ -296,11 +352,11 @@
         <button onclick="applyMapping('sans')" title="Sans">Sans</button>
         <button onclick="applyMapping('fraktur')" title="Fraktur">𝔉𝔯𝔞𝔨</button>
         <button onclick="applyMapping('script')" title="Script">𝒮𝒸𝓇</button>
-        <button onclick="applyMapping('circular')" title="Circular">𝔸𝔹ℂ</button>
-        <button onclick="applyMapping('square')" title="Square">𝚂𝚀</button>
+        <button onclick="applyMapping('circular')" title="Circular (Double-Struck)">𝔸𝔹ℂ</button>
+        <button onclick="applyMapping('square')" title="Square (Monospace)">𝚂𝚀</button>
         <button onclick="applyUnderline()" title="Underline"><span class="preview-under">U</span></button>
         <div style="width:1px; height:20px; background:#ddd; margin:0 5px;"></div>
-        <button onclick="clearFormat()" title="Clear Styles">Clear</button>
+        <button onclick="clearFormat()" title="Clear All Styles">Clear</button>
     </div>
 
     <div class="toolbar-group" style="background: #fcfcfc;">
@@ -325,7 +381,7 @@
 
     <div class="editor-wrapper">
         <textarea id="editor" placeholder="Paste your text here...
-        
+
 1. Select text and click 'B' or 'I' for styles.
 2. Click 'Auto-Emojify' to instantly add relevance.
 3. Use :smile: shortcodes if you prefer."></textarea>
@@ -345,8 +401,11 @@
 <!-- EMOJI PICKER MODAL -->
 <div id="emojiModal" class="emoji-modal">
     <div class="emoji-modal-content">
-        <button class="emoji-close-btn" onclick="closeEmojiPicker()" type="button">✕</button>
-        <h2>Popular Emojis</h2>
+        <!-- FIX: replaced float:right with flexbox header -->
+        <div class="emoji-modal-header">
+            <h2>Popular Emojis</h2>
+            <button class="emoji-close-btn" onclick="closeEmojiPicker()" type="button" aria-label="Close">✕</button>
+        </div>
         <div class="emoji-grid">
             <button class="emoji-btn" onclick="insertEmoji('🚀')" type="button">🚀</button>
             <button class="emoji-btn" onclick="insertEmoji('🔥')" type="button">🔥</button>
@@ -377,66 +436,146 @@
     const charCount = document.getElementById('charCount');
     const wordCount = document.getElementById('wordCount');
 
-    // --- 1. UNICODE MAPS FOR STYLING ---
+    // ---------------------------------------------------------------------------
+    // UNICODE MAPS — all fixes applied. Single source of truth is js/formatter.js;
+    // this inline copy must stay in sync with it.
+    // ---------------------------------------------------------------------------
     const maps = {
         boldSans: {
-            a: '𝗮', b: '𝗯', c: '𝗰', d: '𝗱', e: '𝗲', f: '𝗳', g: '𝗴', h: '𝗵', i: '𝗶', j: '𝗷', k: '𝗸', l: '𝗹', m: '𝗺', n: '𝗻', o: '𝗼', p: '𝗽', q: '𝗾', r: '𝗿', s: '𝘀', t: '𝘁', u: '𝘂', v: '𝘃', w: '𝘄', x: '𝘅', y: '𝘆', z: '𝘇',
-            A: '𝗔', B: '𝗕', C: '𝗖', D: '𝗗', E: '𝗘', F: '𝗙', G: '𝗚', H: '𝗛', I: '𝗜', J: '𝗝', K: '𝗞', L: '𝗟', M: '𝗠', N: '𝗡', O: '𝗢', P: '𝗣', Q: '𝗤', R: '𝗥', S: '𝗦', T: '𝗧', U: '𝗨', V: '𝗩', W: '𝗪', X: '𝗫', Y: '𝗬', Z: '𝗭',
-            0: '𝟬', 1: '𝟭', 2: '𝟮', 3: '𝟯', 4: '𝟰', 5: '𝟱', 6: '𝟲', 7: '𝟳', 8: '𝟴', 9: '𝟵'
+            a: '𝗮', b: '𝗯', c: '𝗰', d: '𝗱', e: '𝗲', f: '𝗳', g: '𝗴', h: '𝗵',
+            i: '𝗶', j: '𝗷', k: '𝗸', l: '𝗹', m: '𝗺', n: '𝗻', o: '𝗼', p: '𝗽',
+            q: '𝗾', r: '𝗿', s: '𝘀', t: '𝘁', u: '𝘂', v: '𝘃', w: '𝘄', x: '𝘅',
+            y: '𝘆', z: '𝘇',
+            A: '𝗔', B: '𝗕', C: '𝗖', D: '𝗗', E: '𝗘', F: '𝗙', G: '𝗚', H: '𝗛',
+            I: '𝗜', J: '𝗝', K: '𝗞', L: '𝗟', M: '𝗠', N: '𝗡', O: '𝗢', P: '𝗣',
+            Q: '𝗤', R: '𝗥', S: '𝗦', T: '𝗧', U: '𝗨', V: '𝗩', W: '𝗪', X: '𝗫',
+            Y: '𝗬', Z: '𝗭',
+            0: '𝟬', 1: '𝟭', 2: '𝟮', 3: '𝟯', 4: '𝟰', 5: '𝟱', 6: '𝟲', 7: '𝟳',
+            8: '𝟴', 9: '𝟵'
         },
         italicSans: {
-            a: '𝘢', b: '𝘣', c: '𝘤', d: '𝘥', e: '𝘦', f: '𝘧', g: '𝘨', h: '𝘩', i: '𝘪', j: '𝘫', k: '𝘬', l: '𝘭', m: '𝘮', n: '𝘯', o: '𝘰', p: '𝘱', q: '𝘲', r: '𝘳', s: '𝘴', t: '𝘵', u: '𝘶', v: '𝘷', w: '𝘸', x: '𝘹', y: '𝘺', z: '𝘻',
-            A: '𝘈', B: '𝘉', C: '𝘊', D: '𝘋', E: '𝘌', F: '𝘍', G: '𝘎', H: '𝘏', I: '𝘐', J: '𝘑', K: '𝘒', L: '𝘓', M: '𝘔', N: '𝘕', O: '𝘖', P: '𝘗', Q: '𝘘', R: '𝘙', S: '𝘚', T: '𝘛', U: '𝘜', V: '𝘝', W: '𝘞', X: '𝘟', Y: '𝘠', Z: '𝘡'
+            a: '𝘢', b: '𝘣', c: '𝘤', d: '𝘥', e: '𝘦', f: '𝘧', g: '𝘨', h: '𝘩',
+            i: '𝘪', j: '𝘫', k: '𝘬', l: '𝘭', m: '𝘮', n: '𝘯', o: '𝘰', p: '𝘱',
+            q: '𝘲', r: '𝘳', s: '𝘴', t: '𝘵', u: '𝘶', v: '𝘷', w: '𝘸', x: '𝘹',
+            y: '𝘺', z: '𝘻',
+            A: '𝘈', B: '𝘉', C: '𝘊', D: '𝘋', E: '𝘌', F: '𝘍', G: '𝘎', H: '𝘏',
+            I: '𝘐', J: '𝘑', K: '𝘒', L: '𝘓', M: '𝘔', N: '𝘕', O: '𝘖', P: '𝘗',
+            Q: '𝘘', R: '𝘙', S: '𝘚', T: '𝘛', U: '𝘜', V: '𝘝', W: '𝘞', X: '𝘟',
+            Y: '𝘠', Z: '𝘡'
         },
         boldItalicSans: {
-            a: '𝙖', b: '𝙗', c: '𝙘', d: '𝙙', e: '𝙚', f: '𝙛', g: '𝙜', h: '𝙝', i: '𝙞', j: '𝙟', k: '𝙠', l: '𝙡', m: '𝙢', n: '𝙣', o: '𝙤', p: '𝙥', q: '𝙦', r: '𝙧', s: '𝙨', t: '𝙩', u: '𝙪', v: '𝙫', w: '𝙬', x: '𝙭', y: '𝙮', z: '𝙯',
-            A: '𝘼', B: '𝘽', C: '𝘾', D: '𝘿', E: '𝙀', F: '𝙁', G: '𝙂', H: '𝙃', I: '𝙄', J: '𝙅', K: '𝙆', L: '𝙇', M: '𝙈', N: '𝙉', O: '𝙊', P: '𝙋', Q: '𝙌', R: '𝙍', S: '𝙎', T: '𝙏', U: '𝙐', V: '𝙑', W: '𝙒', X: '𝙓', Y: '𝙔', Z: '𝙕',
-            0: '𝟬', 1: '𝟭', 2: '𝟮', 3: '𝟯', 4: '𝟰', 5: '𝟱', 6: '𝟲', 7: '𝟳', 8: '𝟴', 9: '𝟵'
+            a: '𝙖', b: '𝙗', c: '𝙘', d: '𝙙', e: '𝙚', f: '𝙛', g: '𝙜', h: '𝙝',
+            i: '𝙞', j: '𝙟', k: '𝙠', l: '𝙡', m: '𝙢', n: '𝙣', o: '𝙤', p: '𝙥',
+            q: '𝙦', r: '𝙧', s: '𝙨', t: '𝙩', u: '𝙪', v: '𝙫', w: '𝙬', x: '𝙭',
+            y: '𝙮', z: '𝙯',
+            A: '𝘼', B: '𝘽', C: '𝘾', D: '𝘿', E: '𝙀', F: '𝙁', G: '𝙂', H: '𝙃',
+            I: '𝙄', J: '𝙅', K: '𝙆', L: '𝙇', M: '𝙈', N: '𝙉', O: '𝙊', P: '𝙋',
+            Q: '𝙌', R: '𝙍', S: '𝙎', T: '𝙏', U: '𝙐', V: '𝙑', W: '𝙒', X: '𝙓',
+            Y: '𝙔', Z: '𝙕',
+            0: '𝟬', 1: '𝟭', 2: '𝟮', 3: '𝟯', 4: '𝟰', 5: '𝟱', 6: '𝟲', 7: '𝟳',
+            8: '𝟴', 9: '𝟵'
         },
         boldSerif: {
-            a: '𝐚', b: '𝐛', c: '𝐜', d: '𝐝', e: '𝐞', f: '𝐟', g: '𝐠', h: '𝐡', i: '𝐢', j: '𝐣', k: '𝐤', l: '𝐥', m: '𝐦', n: '𝐧', o: '𝐨', p: '𝐩', q: '𝐪', r: '𝐫', s: '𝐬', t: '𝐭', u: '𝐮', v: '𝐯', w: '𝐰', x: '𝐱', y: '𝐲', z: '𝐳',
-            A: '𝐀', B: '𝐁', C: '𝐂', D: '𝐃', E: '𝐄', F: '𝐅', G: '𝐆', H: '𝐇', I: '𝐈', J: '𝐉', K: '𝐊', L: '𝐋', M: '𝐌', N: '𝐍', O: '𝐎', P: '𝐏', Q: '𝐐', R: '𝐑', S: '𝐒', T: '𝐓', U: '𝐔', V: '𝐕', W: '𝐖', X: '𝐗', Y: '𝐘', Z: '𝐙'
+            a: '𝐚', b: '𝐛', c: '𝐜', d: '𝐝', e: '𝐞', f: '𝐟', g: '𝐠', h: '𝐡',
+            i: '𝐢', j: '𝐣', k: '𝐤', l: '𝐥', m: '𝐦', n: '𝐧', o: '𝐨', p: '𝐩',
+            q: '𝐪', r: '𝐫', s: '𝐬', t: '𝐭', u: '𝐮', v: '𝐯', w: '𝐰', x: '𝐱',
+            y: '𝐲', z: '𝐳',
+            A: '𝐀', B: '𝐁', C: '𝐂', D: '𝐃', E: '𝐄', F: '𝐅', G: '𝐆', H: '𝐇',
+            I: '𝐈', J: '𝐉', K: '𝐊', L: '𝐋', M: '𝐌', N: '𝐍', O: '𝐎', P: '𝐏',
+            Q: '𝐐', R: '𝐑', S: '𝐒', T: '𝐓', U: '𝐔', V: '𝐕', W: '𝐖', X: '𝐗',
+            Y: '𝐘', Z: '𝐙'
         },
         boldItalicSerif: {
-            a: '𝒂', b: '𝒃', c: '𝒄', d: '𝒅', e: '𝒆', f: '𝒇', g: '𝒈', h: '𝒉', i: '𝒊', j: '𝒋', k: '𝒌', l: '𝒍', m: '𝒎', n: '𝒏', o: '𝒐', p: '𝒑', q: '𝒒', r: '𝒓', s: '𝒔', t: '𝒕', u: '𝒖', v: '𝒗', w: '𝒘', x: '𝒙', y: '𝒚', z: '𝒛',
-            A: '𝑨', B: '𝑩', C: '𝑪', D: '𝑫', E: '𝑬', F: '𝑭', G: '𝑮', H: '𝑯', I: '𝑰', J: '𝑱', K: '𝑲', L: '𝑳', M: '𝑴', N: '𝑵', O: '𝑶', P: '𝑷', Q: '𝑸', R: '𝑹', S: '𝑺', T: '𝑻', U: '𝑼', V: '𝑽', W: '𝑾', X: '𝑿', Y: '𝒀', Z: '𝒁'
+            a: '𝒂', b: '𝒃', c: '𝒄', d: '𝒅', e: '𝒆', f: '𝒇', g: '𝒈', h: '𝒉',
+            i: '𝒊', j: '𝒋', k: '𝒌', l: '𝒍', m: '𝒎', n: '𝒏', o: '𝒐', p: '𝒑',
+            q: '𝒒', r: '𝒓', s: '𝒔', t: '𝒕', u: '𝒖', v: '𝒗', w: '𝒘', x: '𝒙',
+            y: '𝒚', z: '𝒛',
+            A: '𝑨', B: '𝑩', C: '𝑪', D: '𝑫', E: '𝑬', F: '𝑭', G: '𝑮', H: '𝑯',
+            I: '𝑰', J: '𝑱', K: '𝑲', L: '𝑳', M: '𝑴', N: '𝑵', O: '𝑶', P: '𝑷',
+            Q: '𝑸', R: '𝑹', S: '𝑺', T: '𝑻', U: '𝑼', V: '𝑽', W: '𝑾', X: '𝑿',
+            Y: '𝒀', Z: '𝒁'
         },
+        // FIX: now uses Mathematical Italic (U+1D434–U+1D44D / U+1D44E–U+1D467)
+        // Previously identical to italicSans — caused reverse-map collision.
         italicSerif: {
-            a: '𝘢', b: '𝘣', c: '𝘤', d: '𝘥', e: '𝘦', f: '𝘧', g: '𝘨', h: '𝘩', i: '𝘪', j: '𝘫', k: '𝘬', l: '𝘭', m: '𝘮', n: '𝘯', o: '𝘰', p: '𝘱', q: '𝘲', r: '𝘳', s: '𝘴', t: '𝘵', u: '𝘶', v: '𝘷', w: '𝘸', x: '𝘹', y: '𝘺', z: '𝘻',
-            A: '𝘈', B: '𝘉', C: '𝘊', D: '𝘋', E: '𝘌', F: '𝘍', G: '𝘎', H: '𝘏', I: '𝘐', J: '𝘑', K: '𝘒', L: '𝘓', M: '𝘔', N: '𝘕', O: '𝘖', P: '𝘗', Q: '𝘘', R: '𝘙', S: '𝘚', T: '𝘛', U: '𝘜', V: '𝘝', W: '𝘞', X: '𝘟', Y: '𝘠', Z: '𝘡'
+            a: '𝑎', b: '𝑏', c: '𝑐', d: '𝑑', e: '𝑒', f: '𝑓', g: '𝑔', h: 'ℎ',
+            i: '𝑖', j: '𝑗', k: '𝑘', l: '𝑙', m: '𝑚', n: '𝑛', o: '𝑜', p: '𝑝',
+            q: '𝑞', r: '𝑟', s: '𝑠', t: '𝑡', u: '𝑢', v: '𝑣', w: '𝑤', x: '𝑥',
+            y: '𝑦', z: '𝑧',
+            A: '𝐴', B: '𝐵', C: '𝐶', D: '𝐷', E: '𝐸', F: '𝐹', G: '𝐺', H: '𝐻',
+            I: '𝐼', J: '𝐽', K: '𝐾', L: '𝐿', M: '𝑀', N: '𝑁', O: '𝑂', P: '𝑃',
+            Q: '𝑄', R: '𝑅', S: '𝑆', T: '𝑇', U: '𝑈', V: '𝑉', W: '𝑊', X: '𝑋',
+            Y: '𝑌', Z: '𝑍'
         },
+        // FIX: C/H/I used unassigned codepoints; R duplicated S (𝔖→ℜ); Z was lowercase (𝔷→ℨ)
         fraktur: {
-            a: '𝔞', b: '𝔟', c: '𝔠', d: '𝔡', e: '𝔢', f: '𝔣', g: '𝔤', h: '𝔥', i: '𝔦', j: '𝔧', k: '𝔨', l: '𝔩', m: '𝔪', n: '𝔫', o: '𝔬', p: '𝔭', q: '𝔮', r: '𝔯', s: '𝔰', t: '𝔱', u: '𝔲', v: '𝔳', w: '𝔴', x: '𝔵', y: '𝔶', z: '𝔷',
-            A: '𝔄', B: '𝔅', C: '𝔆', D: '𝔇', E: '𝔈', F: '𝔉', G: '𝔊', H: '𝔋', I: '𝔌', J: '𝔍', K: '𝔎', L: '𝔏', M: '𝔐', N: '𝔑', O: '𝔒', P: '𝔓', Q: '𝔔', R: '𝔖', S: '𝔖', T: '𝔗', U: '𝔘', V: '𝔙', W: '𝔚', X: '𝔛', Y: '𝔜', Z: '𝔷'
+            a: '𝔞', b: '𝔟', c: '𝔠', d: '𝔡', e: '𝔢', f: '𝔣', g: '𝔤', h: '𝔥',
+            i: '𝔦', j: '𝔧', k: '𝔨', l: '𝔩', m: '𝔪', n: '𝔫', o: '𝔬', p: '𝔭',
+            q: '𝔮', r: '𝔯', s: '𝔰', t: '𝔱', u: '𝔲', v: '𝔳', w: '𝔴', x: '𝔵',
+            y: '𝔶', z: '𝔷',
+            A: '𝔄', B: '𝔅', C: 'ℭ', D: '𝔇', E: '𝔈', F: '𝔉', G: '𝔊', H: 'ℌ',
+            I: 'ℑ', J: '𝔍', K: '𝔎', L: '𝔏', M: '𝔐', N: '𝔑', O: '𝔒', P: '𝔓',
+            Q: '𝔔', R: 'ℜ', S: '𝔖', T: '𝔗', U: '𝔘', V: '𝔙', W: '𝔚', X: '𝔛',
+            Y: '𝔜', Z: 'ℨ'
         },
+        // FIX: B/E/F/H/I/L/M/R uppercase used italic chars instead of script;
+        //      e/g/o lowercase used italic chars instead of proper script chars.
         script: {
-            a: '𝒶', b: '𝒷', c: '𝒸', d: '𝒹', e: '𝑒', f: '𝒻', g: '𝑔', h: '𝒽', i: '𝒾', j: '𝒿', k: '𝓀', l: '𝓁', m: '𝓂', n: '𝓃', o: '𝑜', p: '𝓅', q: '𝓆', r: '𝓇', s: '𝓈', t: '𝓉', u: '𝓊', v: '𝓋', w: '𝓌', x: '𝓍', y: '𝓎', z: '𝓏',
-            A: '𝒜', B: '𝐵', C: '𝒞', D: '𝒟', E: '𝐸', F: '𝐹', G: '𝒢', H: '𝐻', I: '𝐼', J: '𝒥', K: '𝒦', L: '𝓁', M: '𝑀', N: '𝒩', O: '𝒪', P: '𝒫', Q: '𝒬', R: '𝑅', S: '𝒮', T: '𝒯', U: '𝒰', V: '𝒱', W: '𝒲', X: '𝒳', Y: '𝒴', Z: '𝒵'
+            a: '𝒶', b: '𝒷', c: '𝒸', d: '𝒹', e: 'ℯ', f: '𝒻', g: 'ℊ', h: '𝒽',
+            i: '𝒾', j: '𝒿', k: '𝓀', l: '𝓁', m: '𝓂', n: '𝓃', o: 'ℴ', p: '𝓅',
+            q: '𝓆', r: '𝓇', s: '𝓈', t: '𝓉', u: '𝓊', v: '𝓋', w: '𝓌', x: '𝓍',
+            y: '𝓎', z: '𝓏',
+            A: '𝒜', B: 'ℬ', C: '𝒞', D: '𝒟', E: 'ℰ', F: 'ℱ', G: '𝒢', H: 'ℋ',
+            I: 'ℐ', J: '𝒥', K: '𝒦', L: 'ℒ', M: 'ℳ', N: '𝒩', O: '𝒪', P: '𝒫',
+            Q: '𝒬', R: 'ℛ', S: '𝒮', T: '𝒯', U: '𝒰', V: '𝒱', W: '𝒲', X: '𝒳',
+            Y: '𝒴', Z: '𝒵'
         },
+        // FIX: uppercase C-Z was using Mathematical Bold Fraktur; fixed to Double-Struck.
         circular: {
-            a: '𝕒', b: '𝕓', c: '𝕔', d: '𝕕', e: '𝕖', f: '𝕗', g: '𝕘', h: '𝕙', i: '𝕚', j: '𝕛', k: '𝕜', l: '𝕝', m: '𝕞', n: '𝕟', o: '𝕠', p: '𝕡', q: '𝕢', r: '𝕣', s: '𝕤', t: '𝕥', u: '𝕦', v: '𝕧', w: '𝕨', x: '𝕩', y: '𝕪', z: '𝕫',
-            A: '𝔸', B: '𝔹', C: '𝕮', D: '𝔻', E: '𝔼', F: '𝔽', G: '𝔾', H: '𝕳', I: '𝕴', J: '𝕵', K: '𝕶', L: '𝕷', M: '𝕸', N: '𝕹', O: '𝕺', P: '𝕻', Q: '𝕼', R: '𝕽', S: '𝕾', T: '𝕿', U: '𝖀', V: '𝖁', W: '𝖂', X: '𝖃', Y: '𝖄', Z: '𝖅'
+            a: '𝕒', b: '𝕓', c: '𝕔', d: '𝕕', e: '𝕖', f: '𝕗', g: '𝕘', h: '𝕙',
+            i: '𝕚', j: '𝕛', k: '𝕜', l: '𝕝', m: '𝕞', n: '𝕟', o: '𝕠', p: '𝕡',
+            q: '𝕢', r: '𝕣', s: '𝕤', t: '𝕥', u: '𝕦', v: '𝕧', w: '𝕨', x: '𝕩',
+            y: '𝕪', z: '𝕫',
+            A: '𝔸', B: '𝔹', C: 'ℂ', D: '𝔻', E: '𝔼', F: '𝔽', G: '𝔾', H: 'ℍ',
+            I: '𝕀', J: '𝕁', K: '𝕂', L: '𝕃', M: '𝕄', N: 'ℕ', O: '𝕆', P: 'ℙ',
+            Q: 'ℚ', R: 'ℝ', S: '𝕊', T: '𝕋', U: '𝕌', V: '𝕍', W: '𝕎', X: '𝕏',
+            Y: '𝕐', Z: 'ℤ'
         },
         square: {
-            a: '𝚊', b: '𝚋', c: '𝚌', d: '𝚍', e: '𝚎', f: '𝚏', g: '𝚐', h: '𝚑', i: '𝚒', j: '𝚓', k: '𝚔', l: '𝚕', m: '𝚖', n: '𝚗', o: '𝚘', p: '𝚙', q: '𝚚', r: '𝚛', s: '𝚜', t: '𝚝', u: '𝚞', v: '𝚟', w: '𝚠', x: '𝚡', y: '𝚢', z: '𝚣',
-            A: '𝙰', B: '𝙱', C: '𝙲', D: '𝙳', E: '𝙴', F: '𝙵', G: '𝙶', H: '𝙷', I: '𝙸', J: '𝙹', K: '𝙺', L: '𝙻', M: '𝙼', N: '𝙽', O: '𝙾', P: '𝙿', Q: '𝚀', R: '𝚁', S: '𝚂', T: '𝚃', U: '𝚄', V: '𝚅', W: '𝚆', X: '𝚇', Y: '𝚈', Z: '𝚉',
-            0: '𝟶', 1: '𝟷', 2: '𝟸', 3: '𝟹', 4: '𝟺', 5: '𝟻', 6: '𝟼', 7: '𝟽', 8: '𝟾', 9: '𝟿'
+            a: '𝚊', b: '𝚋', c: '𝚌', d: '𝚍', e: '𝚎', f: '𝚏', g: '𝚐', h: '𝚑',
+            i: '𝚒', j: '𝚓', k: '𝚔', l: '𝚕', m: '𝚖', n: '𝚗', o: '𝚘', p: '𝚙',
+            q: '𝚚', r: '𝚛', s: '𝚜', t: '𝚝', u: '𝚞', v: '𝚟', w: '𝚠', x: '𝚡',
+            y: '𝚢', z: '𝚣',
+            A: '𝙰', B: '𝙱', C: '𝙲', D: '𝙳', E: '𝙴', F: '𝙵', G: '𝙶', H: '𝙷',
+            I: '𝙸', J: '𝙹', K: '𝙺', L: '𝙻', M: '𝙼', N: '𝙽', O: '𝙾', P: '𝙿',
+            Q: '𝚀', R: '𝚁', S: '𝚂', T: '𝚃', U: '𝚄', V: '𝚅', W: '𝚆', X: '𝚇',
+            Y: '𝚈', Z: '𝚉',
+            0: '𝟶', 1: '𝟷', 2: '𝟸', 3: '𝟹', 4: '𝟺', 5: '𝟻', 6: '𝟼', 7: '𝟽',
+            8: '𝟾', 9: '𝟿'
         },
         sans: {
-            a: 'a', b: 'b', c: 'c', d: 'd', e: 'e', f: 'f', g: 'g', h: 'h', i: 'i', j: 'j', k: 'k', l: 'l', m: 'm', n: 'n', o: 'o', p: 'p', q: 'q', r: 'r', s: 's', t: 't', u: 'u', v: 'v', w: 'w', x: 'x', y: 'y', z: 'z',
-            A: 'A', B: 'B', C: 'C', D: 'D', E: 'E', F: 'F', G: 'G', H: 'H', I: 'I', J: 'J', K: 'K', L: 'L', M: 'M', N: 'N', O: 'O', P: 'P', Q: 'Q', R: 'R', S: 'S', T: 'T', U: 'U', V: 'V', W: 'W', X: 'X', Y: 'Y', Z: 'Z'
+            a: 'a', b: 'b', c: 'c', d: 'd', e: 'e', f: 'f', g: 'g', h: 'h',
+            i: 'i', j: 'j', k: 'k', l: 'l', m: 'm', n: 'n', o: 'o', p: 'p',
+            q: 'q', r: 'r', s: 's', t: 't', u: 'u', v: 'v', w: 'w', x: 'x',
+            y: 'y', z: 'z',
+            A: 'A', B: 'B', C: 'C', D: 'D', E: 'E', F: 'F', G: 'G', H: 'H',
+            I: 'I', J: 'J', K: 'K', L: 'L', M: 'M', N: 'N', O: 'O', P: 'P',
+            Q: 'Q', R: 'R', S: 'S', T: 'T', U: 'U', V: 'V', W: 'W', X: 'X',
+            Y: 'Y', Z: 'Z'
         }
     };
 
-    // Create reverse maps to detect existing formats (check in order of specificity)
+    // Build reverse maps
     function createReverseMaps() {
         const reverse = {};
-        // Check bold-italic first, then bold, then italic, then script, then others
-        const order = ['boldItalicSans', 'boldItalicSerif', 'boldSans', 'boldSerif', 'italicSans', 'italicSerif', 'script', 'fraktur', 'circular', 'square', 'sans'];
-        for (let type of order) {
+        const order = [
+            'boldItalicSans', 'boldItalicSerif', 'boldSans', 'boldSerif',
+            'italicSans', 'italicSerif', 'script', 'fraktur', 'circular', 'square', 'sans'
+        ];
+        for (const type of order) {
             if (!maps[type]) continue;
             reverse[type] = {};
-            for (let char in maps[type]) {
+            for (const char in maps[type]) {
                 reverse[type][maps[type][char]] = char;
             }
         }
@@ -444,20 +583,23 @@
     }
     const reverseMaps = createReverseMaps();
 
+    // Emoji / shortcode data
     const buzzwordEmojiMap = {
-        "growth": "📈", "sales": "💰", "money": "💵", "profit": "💸", "team": "🤝", "developer": "👨‍💻", "engineer": "🛠️", "cloud": "☁️",
-        "hiring": "📢", "jobs": "💼", "work": "🛠️", "code": "💻", "tech": "🤖",  
-        "ai": "🧠", "data": "📊", "idea": "💡", "goal": "🎯", "success": "🏆",
-        "win": "🏅", "learn": "📚", "time": "⏳", "deadline": "⏰", "launch": "🚀",
-        "fire": "🔥", "hot": "🔥", "happy": "😊", "sad": "😔", "question": "❓",
-        "email": "📧", "call": "📞", "contact": "📬", "link": "🔗", "website": "🌐",
-        "social_media": "🌍", "important": "⚠️", "alert": "🚨", "check": "✅", "done": "✅"
+        growth: '📈', sales: '💰', money: '💵', profit: '💸', team: '🤝',
+        developer: '👨‍💻', engineer: '🛠️', cloud: '☁️', hiring: '📢', jobs: '💼',
+        work: '🛠️', code: '💻', tech: '🤖', ai: '🧠', data: '📊', idea: '💡',
+        goal: '🎯', success: '🏆', win: '🏅', learn: '📚', time: '⏳',
+        deadline: '⏰', launch: '🚀', fire: '🔥', hot: '🔥', happy: '😊',
+        sad: '😔', question: '❓', email: '📧', call: '📞', contact: '📬',
+        link: '🔗', website: '🌐', social_media: '🌍', important: '⚠️',
+        alert: '🚨', check: '✅', done: '✅'
+    };
+    const shortcodeMap = {
+        ':rocket:': '🚀', ':fire:': '🔥', ':check:': '✅', ':smile:': '😊',
+        ':chart:': '📈', ':target:': '🎯', ':brain:': '🧠', ':100:': '💯'
     };
 
-    const shortcodeMap = {
-        ":rocket:": "🚀", ":fire:": "🔥", ":check:": "✅", ":smile:": "😊", 
-        ":chart:": "📈", ":target:": "🎯", ":brain:": "🧠", ":100:": "💯"
-    };
+    // --- CORE FUNCTIONS ---
 
     function getSelection() {
         const start = editor.selectionStart;
@@ -465,229 +607,167 @@
         return { start, end, text: editor.value.substring(start, end) };
     }
 
-    // Detect which formats are applied to a character
     function detectFormats(char) {
-        if (reverseMaps.boldItalicSans && reverseMaps.boldItalicSans[char]) {
-            return new Set(['boldSans', 'italicSans']); // Has both bold and italic
-        }
-        if (reverseMaps.boldItalicSerif && reverseMaps.boldItalicSerif[char]) {
+        if (reverseMaps.boldItalicSans && reverseMaps.boldItalicSans[char])
+            return new Set(['boldSans', 'italicSans']);
+        if (reverseMaps.boldItalicSerif && reverseMaps.boldItalicSerif[char])
             return new Set(['boldItalicSerif']);
-        }
-        if (reverseMaps.boldSans && reverseMaps.boldSans[char]) {
+        if (reverseMaps.boldSans && reverseMaps.boldSans[char])
             return new Set(['boldSans']);
-        }
-        if (reverseMaps.boldSerif && reverseMaps.boldSerif[char]) {
+        if (reverseMaps.boldSerif && reverseMaps.boldSerif[char])
             return new Set(['boldSerif']);
-        }
-        if (reverseMaps.italicSans && reverseMaps.italicSans[char]) {
+        if (reverseMaps.italicSans && reverseMaps.italicSans[char])
             return new Set(['italicSans']);
-        }
-        if (reverseMaps.italicSerif && reverseMaps.italicSerif[char]) {
+        if (reverseMaps.italicSerif && reverseMaps.italicSerif[char])
             return new Set(['italicSerif']);
-        }
-        if (reverseMaps.fraktur && reverseMaps.fraktur[char]) {
+        if (reverseMaps.fraktur && reverseMaps.fraktur[char])
             return new Set(['fraktur']);
-        }
-        if (reverseMaps.script && reverseMaps.script[char]) {
+        if (reverseMaps.script && reverseMaps.script[char])
             return new Set(['script']);
-        }
-        if (reverseMaps.circular && reverseMaps.circular[char]) {
+        if (reverseMaps.circular && reverseMaps.circular[char])
             return new Set(['circular']);
-        }
-        if (reverseMaps.square && reverseMaps.square[char]) {
+        if (reverseMaps.square && reverseMaps.square[char])
             return new Set(['square']);
-        }
-        if (reverseMaps.sans && reverseMaps.sans[char] && char !== reverseMaps.sans[char]) {
-            return new Set(['sans']);
-        }
-        return new Set(); // Plain text
+        return new Set();
     }
 
-    // Convert character to plain text
     function toPlain(char) {
-        if (reverseMaps.boldItalicSans && reverseMaps.boldItalicSans[char]) {
-            return reverseMaps.boldItalicSans[char];
-        }
-        if (reverseMaps.boldItalicSerif && reverseMaps.boldItalicSerif[char]) {
-            return reverseMaps.boldItalicSerif[char];
-        }
-        if (reverseMaps.boldSans && reverseMaps.boldSans[char]) {
-            return reverseMaps.boldSans[char];
-        }
-        if (reverseMaps.boldSerif && reverseMaps.boldSerif[char]) {
-            return reverseMaps.boldSerif[char];
-        }
-        if (reverseMaps.italicSans && reverseMaps.italicSans[char]) {
-            return reverseMaps.italicSans[char];
-        }
-        if (reverseMaps.italicSerif && reverseMaps.italicSerif[char]) {
-            return reverseMaps.italicSerif[char];
-        }
-        if (reverseMaps.fraktur && reverseMaps.fraktur[char]) {
-            return reverseMaps.fraktur[char];
-        }
-        if (reverseMaps.script && reverseMaps.script[char]) {
-            return reverseMaps.script[char];
-        }
-        if (reverseMaps.circular && reverseMaps.circular[char]) {
-            return reverseMaps.circular[char];
-        }
-        if (reverseMaps.square && reverseMaps.square[char]) {
-            return reverseMaps.square[char];
-        }
-        if (reverseMaps.sans && reverseMaps.sans[char]) {
-            return reverseMaps.sans[char];
+        const order = [
+            'boldItalicSans', 'boldItalicSerif', 'boldSans', 'boldSerif',
+            'italicSans', 'italicSerif', 'script', 'fraktur', 'circular', 'square', 'sans'
+        ];
+        for (const type of order) {
+            if (reverseMaps[type] && reverseMaps[type][char] !== undefined)
+                return reverseMaps[type][char];
         }
         return char;
     }
 
-    // Apply formatting with toggle and composition
+    function formatSetToString(set) {
+        return Array.from(set).sort().join(',');
+    }
+
+    // FIX: allHaveSameState now skips non-alpha chars so "𝗛𝗲𝗹𝗹𝗼 𝗪𝗼𝗿𝗹𝗱" toggles correctly
     function applyMapping(type) {
         const sel = getSelection();
         if (!sel.text) return;
 
-        let res = '';
         let allHaveSameState = true;
         let firstCharState = null;
 
-        // Analyze first character's format state for consistency check
-        if (sel.text.length > 0) {
-            const firstFormats = detectFormats(sel.text[0]);
-            firstCharState = formatSetToString(firstFormats);
+        const alphaChars = Array.from(sel.text).filter(c => /[a-z]/i.test(toPlain(c)));
 
-            // Check if all characters have the same format state
-            for (let i = 1; i < sel.text.length; i++) {
-                const charFormats = detectFormats(sel.text[i]);
-                if (formatSetToString(charFormats) !== firstCharState) {
+        if (alphaChars.length > 0) {
+            firstCharState = formatSetToString(detectFormats(alphaChars[0]));
+            for (let i = 1; i < alphaChars.length; i++) {
+                if (formatSetToString(detectFormats(alphaChars[i])) !== firstCharState) {
                     allHaveSameState = false;
                     break;
                 }
             }
         }
 
-        // Process each character
-        for (let char of sel.text) {
+        let res = '';
+        for (const char of sel.text) {
             const plainChar = toPlain(char);
             const currentFormats = detectFormats(char);
-
-            // Determine new format set
             let newFormats = new Set(currentFormats);
 
-            if (allHaveSameState && currentFormats.has(type)) {
-                // Toggle OFF: User is turning off a format they already have
+            const isAlpha = /[a-z]/i.test(plainChar);
+            if (isAlpha && allHaveSameState && currentFormats.has(type)) {
                 newFormats.delete(type);
             } else {
-                // Add the format
                 newFormats.add(type);
             }
 
-            // Convert to appropriate character
             let result = plainChar;
-            
             if (newFormats.has('boldSans') && newFormats.has('italicSans')) {
-                // Apply bold+italic combination
                 result = maps.boldItalicSans[result] || result;
             } else if (newFormats.has('boldItalicSerif')) {
                 result = maps.boldItalicSerif[result] || result;
             } else if (newFormats.has('boldSans')) {
-                // Apply only bold sans
                 result = maps.boldSans[result] || result;
             } else if (newFormats.has('boldSerif')) {
-                // Apply only bold serif
                 result = maps.boldSerif[result] || result;
             } else if (newFormats.has('italicSans')) {
-                // Apply only italic sans
                 result = maps.italicSans[result] || result;
             } else if (newFormats.has('italicSerif')) {
-                // Apply only italic serif
                 result = maps.italicSerif[result] || result;
             } else if (newFormats.has('fraktur')) {
-                // Apply fraktur
                 result = maps.fraktur[result] || result;
             } else if (newFormats.has('script')) {
-                // Apply script
                 result = maps.script[result] || result;
             } else if (newFormats.has('circular')) {
-                // Apply circular
                 result = maps.circular[result] || result;
             } else if (newFormats.has('square')) {
-                // Apply square
                 result = maps.square[result] || result;
             } else if (newFormats.has('sans')) {
-                // Apply sans (plain text)
                 result = maps.sans[result] || result;
             }
-
             res += result;
         }
-
         replaceSelection(res);
     }
 
-    // Helper to convert format set to string for comparison
-    function formatSetToString(set) {
-        const arr = Array.from(set).sort();
-        return arr.join(',');
-    }
-
-    // Apply Underline (Using Combining Low Line \u0332)
     function applyUnderline() {
         const sel = getSelection();
         if (!sel.text) return;
-
-        // Logic: Add \u0332 after every character
         let res = '';
-        for (let char of sel.text) res += char + '\u0332';
+        for (const char of sel.text) res += char + '\u0332';
         replaceSelection(res);
     }
 
-    // --- 3. MAGIC EMOJI LOGIC ---
+    // FIX: now calls toPlain() on every character so Unicode math styles actually clear.
+    // Previously only stripped combining diacritics, leaving 𝗮 as 𝗮.
+    function clearFormat() {
+        const sel = getSelection();
+        if (!sel.text) return;
+        let clean = '';
+        for (const char of sel.text) clean += toPlain(char);
+        clean = clean.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        replaceSelection(clean);
+    }
 
-    // Option A: Auto-Emojify (Scans words and appends emojis)
+    // --- MAGIC EMOJI ---
+
     function autoEmojify() {
         const text = editor.value;
         const newText = text.replace(/\b(\w+)\b/g, (match) => {
             const lower = match.toLowerCase();
-            if (buzzwordEmojiMap[lower]) return `${match} ${buzzwordEmojiMap[lower]}`;
-            return match;
+            return buzzwordEmojiMap[lower] ? `${match} ${buzzwordEmojiMap[lower]}` : match;
         });
         editor.value = newText;
         updateStats();
-        showToast("Magic emojis applied! ✨");
+        showToast('Magic emojis applied! ✨');
     }
 
     function formatCodeBlock() {
         const sel = getSelection();
         if (!sel.text) return;
-
-        const formatted = "```\n" + sel.text + "\n```";
-        replaceSelection(formatted);
-        showToast("Code block formatted! 💻");
+        replaceSelection('```\n' + sel.text + '\n```');
+        showToast('Code block formatted! 💻');
     }
 
     function formatInlineCode() {
         const sel = getSelection();
         if (!sel.text) return;
-
-        const formatted = "`" + sel.text + "`";
-        replaceSelection(formatted);
-        showToast("Inline code formatted! 📝");
+        replaceSelection('`' + sel.text + '`');
+        showToast('Inline code formatted! 📝');
     }
 
     function showEmojiPicker() {
-        const modal = document.getElementById('emojiModal');
-        if (modal) modal.classList.add('visible');
+        document.getElementById('emojiModal').classList.add('visible');
     }
 
     function closeEmojiPicker() {
-        const modal = document.getElementById('emojiModal');
-        if (modal) modal.classList.remove('visible');
+        document.getElementById('emojiModal').classList.remove('visible');
     }
 
     function insertEmoji(emoji) {
         const start = editor.selectionStart;
         editor.value = editor.value.substring(0, start) + emoji + ' ' + editor.value.substring(start);
-        editor.selectionStart = editor.selectionEnd = start + emoji.length + 1;
+        // Use spread to count Unicode code points, not UTF-16 units
+        editor.selectionStart = editor.selectionEnd = start + [...emoji].length + 1;
         editor.focus();
         closeEmojiPicker();
         updateStats();
@@ -695,11 +775,12 @@
 
     function convertShortcodes() {
         let text = editor.value;
-        for (let code in shortcodeMap) {
+        for (const code in shortcodeMap) {
             text = text.split(code).join(shortcodeMap[code]);
         }
         editor.value = text;
         updateStats();
+        showToast('Shortcodes converted! 🔄');
     }
 
     // --- UTILS ---
@@ -721,27 +802,15 @@
         updateStats();
     }
 
-    function clearFormat() {
-        // Simple normalizer to remove non-ASCII (strips styling)
-        const sel = getSelection();
-        if (!sel.text) return;
-
-        // Normalize string to NFD form and remove combining diacritics (fixes underline)
-        let clean = sel.text.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        
-        // Remove Math Bold/Italic by converting to ASCII range (rough approximation)
-        // For a perfect clear, we would reverse map, but this clears "Underline" perfectly.
-        // For this demo, let's just re-write the text as is if normalization fails, 
-        // or mapping to plain text manually if needed.
-        // Since we are replacing, let's just remove the combining chars for Underline mostly.
-        
-        replaceSelection(clean);
-    }
-
     function copyText() {
-        if(!editor.value) return;
+        if (!editor.value) return;
         navigator.clipboard.writeText(editor.value).then(() => {
-            showToast("Copied to clipboard! 📋");
+            showToast('Copied to clipboard! 📋');
+        }).catch(() => {
+            // Fallback for older browsers
+            editor.select();
+            document.execCommand('copy');
+            showToast('Copied! 📋');
         });
     }
 
@@ -753,17 +822,15 @@
     }
 
     function updateStats() {
-        charCount.innerText = editor.value.length + " chars";
-        wordCount.innerText = editor.value.trim().split(/\s+/).filter(n => n).length + " words";
+        charCount.innerText = editor.value.length + ' chars';
+        const words = editor.value.trim().split(/\s+/).filter(n => n).length;
+        wordCount.innerText = words + ' words';
     }
 
     editor.addEventListener('input', updateStats);
 
-    // Close emoji modal when clicking outside
     document.getElementById('emojiModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeEmojiPicker();
-        }
+        if (e.target === this) closeEmojiPicker();
     });
 </script>
 

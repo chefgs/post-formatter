@@ -9,7 +9,7 @@ app_css = Style("""
         --surface: #ffffff;
         --border: #e0e0e0;
     }
-    body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: #191919; display: flex; justify-content: center; min-height: 100vh; padding: 20px; }
+    body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: #191919; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
     .app-container { background: var(--surface); width: 100%; max-width: 750px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; display: flex; flex-direction: column; }
     
     .header { padding: 24px 32px; border-bottom: 1px solid var(--border); background: #fff; }
@@ -43,8 +43,8 @@ app_css = Style("""
         overflow-x: hidden;      /* Hides horizontal scrollbar */
     }
     
-    .footer { padding: 16px 32px; background: #fff; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-    .btn-primary { background: var(--primary); color: white; border: none; padding: 12px 28px; border-radius: 30px; font-weight: 600; cursor: pointer; }
+    .footer { padding: 16px 32px; background: #fff; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .btn-primary { background: var(--primary); color: white; border: none; padding: 12px 28px; border-radius: 30px; font-weight: 600; cursor: pointer; white-space: nowrap; }
     .btn-primary:hover { background: #004182; }
     
     .toast { position: fixed; bottom: 40px; left: 50%; transform: translate(-50%, 20px); background: #333; color: white; padding: 12px 24px; border-radius: 50px; opacity: 0; transition: all 0.3s ease; pointer-events: none; }
@@ -58,8 +58,19 @@ app_css = Style("""
     .emoji-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
     .emoji-btn { background: #f0f0f0; border: 1px solid var(--border); border-radius: 8px; padding: 8px; cursor: pointer; font-size: 1.8rem; transition: all 0.2s; }
     .emoji-btn:hover { background: #eef3f8; border-color: var(--primary); transform: scale(1.1); }
-    .emoji-close-btn { float: right; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; }
+    .emoji-modal-header { display: flex; justify-content: space-between; align-items: center; margin: 0 0 16px 0; }
+    .emoji-modal-header h2 { margin: 0; color: var(--primary); font-size: 1.2rem; }
+    .emoji-close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; padding: 0; line-height: 1; }
     .emoji-close-btn:hover { color: #000; }
+    @media (max-width: 600px) {
+        body { padding: 0; align-items: stretch; }
+        .app-container { border-radius: 0; min-height: 100vh; max-width: 100%; border: none; }
+        .toolbar-group { padding: 10px; gap: 5px; justify-content: center; }
+        .label { display: none; }
+        textarea { padding: 16px; font-size: 1rem; height: 280px; }
+        .footer { padding: 12px 16px; flex-direction: column; align-items: stretch; gap: 10px; }
+        .btn-primary { width: 100%; text-align: center; padding: 14px 20px; border-radius: 12px; }
+    }
 """)
 
 
@@ -88,20 +99,20 @@ client_logic = Script("""
             A: '𝑨', B: '𝑩', C: '𝑪', D: '𝑫', E: '𝑬', F: '𝑭', G: '𝑮', H: '𝑯', I: '𝑰', J: '𝑱', K: '𝑲', L: '𝑳', M: '𝑴', N: '𝑵', O: '𝑶', P: '𝑷', Q: '𝑸', R: '𝑹', S: '𝑺', T: '𝑻', U: '𝑼', V: '𝑽', W: '𝑾', X: '𝑿', Y: '𝒀', Z: '𝒁'
         },
         italicSerif: {
-            a: '𝘢', b: '𝘣', c: '𝘤', d: '𝘥', e: '𝘦', f: '𝘧', g: '𝘨', h: '𝘩', i: '𝘪', j: '𝘫', k: '𝘬', l: '𝘭', m: '𝘮', n: '𝘯', o: '𝘰', p: '𝘱', q: '𝘲', r: '𝘳', s: '𝘴', t: '𝘵', u: '𝘶', v: '𝘷', w: '𝘸', x: '𝘹', y: '𝘺', z: '𝘻',
-            A: '𝘈', B: '𝘉', C: '𝘊', D: '𝘋', E: '𝘌', F: '𝘍', G: '𝘎', H: '𝘏', I: '𝘐', J: '𝘑', K: '𝘒', L: '𝘓', M: '𝘔', N: '𝘕', O: '𝘖', P: '𝘗', Q: '𝘘', R: '𝘙', S: '𝘚', T: '𝘛', U: '𝘜', V: '𝘝', W: '𝘞', X: '𝘟', Y: '𝘠', Z: '𝘡'
+            a: '𝑎', b: '𝑏', c: '𝑐', d: '𝑑', e: '𝑒', f: '𝑓', g: '𝑔', h: 'ℎ', i: '𝑖', j: '𝑗', k: '𝑘', l: '𝑙', m: '𝑚', n: '𝑛', o: '𝑜', p: '𝑝', q: '𝑞', r: '𝑟', s: '𝑠', t: '𝑡', u: '𝑢', v: '𝑣', w: '𝑤', x: '𝑥', y: '𝑦', z: '𝑧',
+            A: '𝐴', B: '𝐵', C: '𝐶', D: '𝐷', E: '𝐸', F: '𝐹', G: '𝐺', H: '𝐻', I: '𝐼', J: '𝐽', K: '𝐾', L: '𝐿', M: '𝑀', N: '𝑁', O: '𝑂', P: '𝑃', Q: '𝑄', R: '𝑅', S: '𝑆', T: '𝑇', U: '𝑈', V: '𝑉', W: '𝑊', X: '𝑋', Y: '𝑌', Z: '𝑍'
         },
         fraktur: {
             a: '𝔞', b: '𝔟', c: '𝔠', d: '𝔡', e: '𝔢', f: '𝔣', g: '𝔤', h: '𝔥', i: '𝔦', j: '𝔧', k: '𝔨', l: '𝔩', m: '𝔪', n: '𝔫', o: '𝔬', p: '𝔭', q: '𝔮', r: '𝔯', s: '𝔰', t: '𝔱', u: '𝔲', v: '𝔳', w: '𝔴', x: '𝔵', y: '𝔶', z: '𝔷',
-            A: '𝔄', B: '𝔅', C: '𝔆', D: '𝔇', E: '𝔈', F: '𝔉', G: '𝔊', H: '𝔋', I: '𝔌', J: '𝔍', K: '𝔎', L: '𝔏', M: '𝔐', N: '𝔑', O: '𝔒', P: '𝔓', Q: '𝔔', R: '𝔖', S: '𝔖', T: '𝔗', U: '𝔘', V: '𝔙', W: '𝔚', X: '𝔛', Y: '𝔜', Z: '𝔷'
+            A: '𝔄', B: '𝔅', C: 'ℭ', D: '𝔇', E: '𝔈', F: '𝔉', G: '𝔊', H: 'ℌ', I: 'ℑ', J: '𝔍', K: '𝔎', L: '𝔏', M: '𝔐', N: '𝔑', O: '𝔒', P: '𝔓', Q: '𝔔', R: 'ℜ', S: '𝔖', T: '𝔗', U: '𝔘', V: '𝔙', W: '𝔚', X: '𝔛', Y: '𝔜', Z: 'ℨ'
         },
         script: {
-            a: '𝒶', b: '𝒷', c: '𝒸', d: '𝒹', e: '𝑒', f: '𝒻', g: '𝑔', h: '𝒽', i: '𝒾', j: '𝒿', k: '𝓀', l: '𝓁', m: '𝓂', n: '𝓃', o: '𝑜', p: '𝓅', q: '𝓆', r: '𝓇', s: '𝓈', t: '𝓉', u: '𝓊', v: '𝓋', w: '𝓌', x: '𝓍', y: '𝓎', z: '𝓏',
-            A: '𝒜', B: '𝐵', C: '𝒞', D: '𝒟', E: '𝐸', F: '𝐹', G: '𝒢', H: '𝐻', I: '𝐼', J: '𝒥', K: '𝒦', L: '𝓁', M: '𝑀', N: '𝒩', O: '𝒪', P: '𝒫', Q: '𝒬', R: '𝑅', S: '𝒮', T: '𝒯', U: '𝒰', V: '𝒱', W: '𝒲', X: '𝒳', Y: '𝒴', Z: '𝒵'
+            a: '𝒶', b: '𝒷', c: '𝒸', d: '𝒹', e: 'ℯ', f: '𝒻', g: 'ℊ', h: '𝒽', i: '𝒾', j: '𝒿', k: '𝓀', l: '𝓁', m: '𝓂', n: '𝓃', o: 'ℴ', p: '𝓅', q: '𝓆', r: '𝓇', s: '𝓈', t: '𝓉', u: '𝓊', v: '𝓋', w: '𝓌', x: '𝓍', y: '𝓎', z: '𝓏',
+            A: '𝒜', B: 'ℬ', C: '𝒞', D: '𝒟', E: 'ℰ', F: 'ℱ', G: '𝒢', H: 'ℋ', I: 'ℐ', J: '𝒥', K: '𝒦', L: 'ℒ', M: 'ℳ', N: '𝒩', O: '𝒪', P: '𝒫', Q: '𝒬', R: 'ℛ', S: '𝒮', T: '𝒯', U: '𝒰', V: '𝒱', W: '𝒲', X: '𝒳', Y: '𝒴', Z: '𝒵'
         },
         circular: {
             a: '𝕒', b: '𝕓', c: '𝕔', d: '𝕕', e: '𝕖', f: '𝕗', g: '𝕘', h: '𝕙', i: '𝕚', j: '𝕛', k: '𝕜', l: '𝕝', m: '𝕞', n: '𝕟', o: '𝕠', p: '𝕡', q: '𝕢', r: '𝕣', s: '𝕤', t: '𝕥', u: '𝕦', v: '𝕧', w: '𝕨', x: '𝕩', y: '𝕪', z: '𝕫',
-            A: '𝔸', B: '𝔹', C: '𝕮', D: '𝔻', E: '𝔼', F: '𝔽', G: '𝔾', H: '𝕳', I: '𝕴', J: '𝕵', K: '𝕶', L: '𝕷', M: '𝕸', N: '𝕹', O: '𝕺', P: '𝕻', Q: '𝕼', R: '𝕽', S: '𝕾', T: '𝕿', U: '𝖀', V: '𝖁', W: '𝖂', X: '𝖃', Y: '𝖄', Z: '𝖅'
+            A: '𝔸', B: '𝔹', C: 'ℂ', D: '𝔻', E: '𝔼', F: '𝔽', G: '𝔾', H: 'ℍ', I: '𝕀', J: '𝕁', K: '𝕂', L: '𝕃', M: '𝕄', N: 'ℕ', O: '𝕆', P: 'ℙ', Q: 'ℚ', R: 'ℝ', S: '𝕊', T: '𝕋', U: '𝕌', V: '𝕍', W: '𝕎', X: '𝕏', Y: '𝕐', Z: 'ℤ'
         },
         square: {
             a: '𝚊', b: '𝚋', c: '𝚌', d: '𝚍', e: '𝚎', f: '𝚏', g: '𝚐', h: '𝚑', i: '𝚒', j: '𝚓', k: '𝚔', l: '𝚕', m: '𝚖', n: '𝚗', o: '𝚘', p: '𝚙', q: '𝚚', r: '𝚛', s: '𝚜', t: '𝚝', u: '𝚞', v: '𝚟', w: '𝚠', x: '𝚡', y: '𝚢', z: '𝚣',
@@ -310,8 +321,11 @@ def EmojiPicker():
     
     return Div(
         Div(
-            Button("✕", onclick="closeEmojiPicker()", cls="emoji-close-btn", type="button"),
-            H2("Popular Emojis", style="margin: 0 0 16px 0; color: var(--primary);"),
+            Div(
+                H2("Popular Emojis"),
+                Button("✕", onclick="closeEmojiPicker()", cls="emoji-close-btn", type="button", aria_label="Close"),
+                cls="emoji-modal-header"
+            ),
             Div(*emoji_buttons, cls="emoji-grid"),
             cls="emoji-modal-content"
         ),
