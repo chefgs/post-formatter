@@ -16,8 +16,14 @@ const {
     clearFormatText,
     buzzwordEmojiMap,
     shortcodeMap,
+    popularEmojiList,
+    audienceProfiles,
     autoEmojifyText,
-    convertShortcodesText
+    convertShortcodesText,
+    extractKeywords,
+    suggestEmojisForText,
+    generateHashtags,
+    formatPostForAudience
 } = require('../js/formatter.js');
 
 const ALL_LOWERCASE = 'abcdefghijklmnopqrstuvwxyz'.split('');
@@ -459,6 +465,14 @@ describe('autoEmojifyText', () => {
         expect(result).toContain('safety');
         expect(result).not.toContain('safety 🔥');
     });
+
+    test('only decorates the first repeated buzzword occurrence', () => {
+        expect(autoEmojifyText('launch launch launch')).toBe('launch 🚀 launch launch');
+    });
+
+    test('does not duplicate an emoji that already follows the buzzword', () => {
+        expect(autoEmojifyText('launch 🚀 today')).toBe('launch 🚀 today');
+    });
 });
 
 // ============================================================================
@@ -525,5 +539,82 @@ describe('Edge Cases', () => {
         const set1 = new Set(['italicSans', 'boldSans']);
         const set2 = new Set(['boldSans', 'italicSans']);
         expect(formatSetToString(set1)).toBe(formatSetToString(set2));
+    });
+});
+
+// ============================================================================
+// SUITE 14: SOCIAL AUDIENCE HELPERS
+// ============================================================================
+describe('Social Audience Helpers', () => {
+    test('popularEmojiList is available for the UI', () => {
+        expect(popularEmojiList.length).toBeGreaterThanOrEqual(10);
+        expect(popularEmojiList[0]).toHaveProperty('emoji');
+        expect(popularEmojiList[0]).toHaveProperty('audiences');
+    });
+
+    test('audienceProfiles expose the expected audiences', () => {
+        expect(Object.keys(audienceProfiles).sort()).toEqual(['facebook', 'instagram', 'linkedin', 'x']);
+        expect(audienceProfiles.linkedin.charLimit).toBe(3000);
+        expect(audienceProfiles.x.charLimit).toBe(280);
+    });
+
+    test('extractKeywords removes stop words and preserves useful terms', () => {
+        expect(extractKeywords('We are building growth with AI for developer teams', 4))
+            .toEqual(['building', 'growth', 'ai', 'developer']);
+    });
+
+    test('suggestEmojisForText returns unique, audience-aware suggestions', () => {
+        const emojis = suggestEmojisForText('AI launch for growth teams', 5, 'linkedin');
+        expect(emojis[0]).toBe(audienceProfiles.linkedin.defaultEmoji);
+        expect(emojis).toContain('🧠');
+        expect(emojis).toContain('🚀');
+        expect(new Set(emojis).size).toBe(emojis.length);
+    });
+
+    test('generateHashtags respects the audience hashtag limit', () => {
+        const hashtags = generateHashtags('Growth launch ideas for developer teams and cloud data workflows', 'x');
+        expect(hashtags.length).toBeLessThanOrEqual(audienceProfiles.x.hashtagLimit);
+        expect(hashtags[0]).toMatch(/^#/);
+    });
+});
+
+// ============================================================================
+// SUITE 15: AUDIENCE POST FORMATTING
+// ============================================================================
+describe('formatPostForAudience', () => {
+    const sampleText = 'Launch your AI product with a clear value proposition. Highlight proof points. End with one clear call to action.';
+
+    test('formats a LinkedIn-style post with bullets, CTA, and hashtags', () => {
+        const result = formatPostForAudience(sampleText, 'linkedin');
+        expect(result).toContain('💼 ');
+        expect(result).toContain('• Highlight proof points.');
+        expect(result).toContain(audienceProfiles.linkedin.cta);
+        expect(result).toContain('#Launch');
+    });
+
+    test('formats an X/Twitter-style post within the character limit', () => {
+        const result = formatPostForAudience(`${sampleText} Add more detail about growth, launch, and data wins for the team.`, 'x');
+        expect(result.length).toBeLessThanOrEqual(audienceProfiles.x.charLimit);
+        expect(result).toContain(audienceProfiles.x.cta);
+    });
+
+    test('formats an Instagram-style post with emoji-led bullets', () => {
+        const result = formatPostForAudience(sampleText, 'instagram');
+        expect(result).toContain(audienceProfiles.instagram.cta);
+        expect(result).toMatch(/🚀 Highlight proof points\.|🔥 Highlight proof points\.|💡 Highlight proof points\./);
+    });
+
+    test('formats a Facebook-style post with a community CTA', () => {
+        const result = formatPostForAudience(sampleText, 'facebook');
+        expect(result).toContain(audienceProfiles.facebook.cta);
+        expect(result).toContain('😊');
+    });
+
+    test('falls back to LinkedIn for an unknown audience', () => {
+        expect(formatPostForAudience(sampleText, 'unknown')).toContain(audienceProfiles.linkedin.cta);
+    });
+
+    test('returns an empty string when no content is provided', () => {
+        expect(formatPostForAudience('', 'linkedin')).toBe('');
     });
 });
