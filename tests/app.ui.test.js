@@ -10,6 +10,7 @@ const APP_SCRIPT = fs.readFileSync(
     path.join(__dirname, '../js/app.js'),
     'utf8'
 );
+const CATALOG_EMOJI_CLASS = 'catalog-emoji';
 
 class MockClassList {
     constructor(element) {
@@ -328,7 +329,7 @@ describe('Browser UI wiring', () => {
         expect(ui.toast.textContent).toBe('Emoji added.');
 
         const catalogButton = ui.emojiCatalog.children[0];
-        const catalogEmojiMatch = /catalog-emoji">([^<]+)/.exec(catalogButton.innerHTML);
+        const catalogEmojiMatch = new RegExp(`${CATALOG_EMOJI_CLASS}">([^<]+)`).exec(catalogButton.innerHTML);
         expect(catalogEmojiMatch).not.toBeNull();
         const catalogEmoji = catalogEmojiMatch[1];
         catalogButton.click();
