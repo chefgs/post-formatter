@@ -356,6 +356,7 @@ const audienceProfiles = {
     },
     facebook: {
         label: 'Facebook',
+        // Practical high ceiling so the counter does not constrain typical long-form Facebook posts.
         charLimit: 63206,
         tone: 'Conversational and community-driven',
         bullet: '👉',
@@ -363,6 +364,13 @@ const audienceProfiles = {
         hashtagLimit: 4,
         defaultEmoji: '💬'
     }
+};
+
+const audienceLayoutRules = {
+    linkedin: { openerLimit: 180, supportLines: 3 },
+    x: { openerLimit: 110, supportLines: 2 },
+    instagram: { openerLimit: 180, supportLines: 3 },
+    facebook: { openerLimit: 180, supportLines: 3 }
 };
 
 const stopWords = new Set([
@@ -488,15 +496,16 @@ function formatBulletLines(lines, bullet, emojiSuggestions) {
 function formatPostForAudience(text, audience = 'linkedin') {
     const selectedAudience = audienceProfiles[audience] ? audience : 'linkedin';
     const profile = audienceProfiles[selectedAudience];
+    const layout = audienceLayoutRules[selectedAudience];
     const ideas = splitIntoIdeas(text);
     if (ideas.length === 0) return '';
 
     const emojiSuggestions = suggestEmojisForText(text, 5, selectedAudience);
     const hashtags = generateHashtags(text, selectedAudience);
     const openerEmoji = emojiSuggestions[0] || profile.defaultEmoji;
-    const opener = `${openerEmoji} ${truncateText(ideas[0], selectedAudience === 'x' ? 110 : 180)}`;
+    const opener = `${openerEmoji} ${truncateText(ideas[0], layout.openerLimit)}`;
     const support = formatBulletLines(
-        ideas.slice(1, selectedAudience === 'x' ? 2 : 3),
+        ideas.slice(1, layout.supportLines),
         profile.bullet,
         emojiSuggestions
     );

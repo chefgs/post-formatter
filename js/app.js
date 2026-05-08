@@ -76,8 +76,12 @@
             );
         }
 
+        function underlineText(text) {
+            return Array.from(text).map((char) => `${char}\u0332`).join('');
+        }
+
         function applyUnderline() {
-            transformSelection((text) => Array.from(text).map((char) => `${char}\u0332`).join(''), 'Select text to underline.', 'Underline applied.');
+            transformSelection(underlineText, 'Select text to underline.', 'Underline applied.');
         }
 
         function clearFormatting() {
