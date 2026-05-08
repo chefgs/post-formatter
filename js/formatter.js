@@ -380,7 +380,8 @@ function autoEmojifyText(text) {
         const emoji = buzzwordEmojiMap[lower];
         if (!emoji) return match;
         if (usedWords.has(lower)) return match;
-        if (source.slice(offset + word.length).startsWith(` ${emoji}`)) return match;
+        const tail = source.slice(offset + word.length);
+        if (new RegExp(`^\\s+${escapeRegExp(emoji)}`).test(tail)) return match;
         usedWords.add(lower);
         return `${match} ${emoji}`;
     });
@@ -404,6 +405,10 @@ function normalizeText(text) {
 
 function unique(list) {
     return Array.from(new Set(list.filter(Boolean)));
+}
+
+function escapeRegExp(text) {
+    return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function splitIntoIdeas(text) {

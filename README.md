@@ -58,7 +58,7 @@ npm test
 ```
 
 ### Open the app
-Open `/home/runner/work/post-formatter/post-formatter/html/index.html` in a browser.
+Open `html/index.html` in a browser from the project root.
 
 ## Python entrypoint
 The repository still includes `main.py` for environments that expect a Python entrypoint. CI validates that the file compiles successfully.
