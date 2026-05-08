@@ -187,7 +187,7 @@
 
             charCount.textContent = `${chars} chars`;
             wordCount.textContent = `${words} words`;
-            audienceCounter.textContent = `${remaining >= 0 ? remaining : 0} / ${profile.charLimit} remaining`;
+            audienceCounter.textContent = `${Math.max(0, remaining)} / ${profile.charLimit} remaining`;
             audienceCounter.className = remaining < 0 ? 'metric metric-danger' : 'metric';
         }
 

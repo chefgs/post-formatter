@@ -356,7 +356,7 @@ const audienceProfiles = {
     },
     facebook: {
         label: 'Facebook',
-        // Practical high ceiling so the counter does not constrain typical long-form Facebook posts.
+        // Historical Facebook post limits are roughly ~63k chars, so keep the counter effectively non-restrictive.
         charLimit: 63206,
         tone: 'Conversational and community-driven',
         bullet: '👉',
@@ -505,7 +505,7 @@ function formatPostForAudience(text, audience = 'linkedin') {
     const openerEmoji = emojiSuggestions[0] || profile.defaultEmoji;
     const opener = `${openerEmoji} ${truncateText(ideas[0], layout.openerLimit)}`;
     const support = formatBulletLines(
-        ideas.slice(1, layout.supportLines),
+        ideas.slice(1, layout.supportLines + 1),
         profile.bullet,
         emojiSuggestions
     );

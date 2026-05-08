@@ -575,6 +575,7 @@ describe('Social Audience Helpers', () => {
         const hashtags = generateHashtags('Growth launch ideas for developer teams and cloud data workflows', 'x');
         expect(hashtags.length).toBeLessThanOrEqual(audienceProfiles.x.hashtagLimit);
         expect(hashtags[0]).toMatch(/^#/);
+        hashtags.forEach((tag) => expect(tag).toMatch(/^#[A-Za-z0-9]+$/));
     });
 });
 
