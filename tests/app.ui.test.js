@@ -328,7 +328,9 @@ describe('Browser UI wiring', () => {
         expect(ui.toast.textContent).toBe('Emoji added.');
 
         const catalogButton = ui.emojiCatalog.children[0];
-        const catalogEmoji = /catalog-emoji">([^<]+)/.exec(catalogButton.innerHTML)[1];
+        const catalogEmojiMatch = /catalog-emoji">([^<]+)/.exec(catalogButton.innerHTML);
+        expect(catalogEmojiMatch).not.toBeNull();
+        const catalogEmoji = catalogEmojiMatch[1];
         catalogButton.click();
         expect(ui.editor.value).toContain(`${catalogEmoji} `);
         expect(ui.toast.textContent).toContain('emoji inserted.');
