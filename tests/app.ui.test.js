@@ -218,8 +218,14 @@ function createHarness(initialText = '') {
 }
 
 async function flushPromises() {
+    // The first tick settles clipboard.writeText(); the second settles the chained then/catch in copyText().
     await Promise.resolve();
     await Promise.resolve();
+}
+
+function extractCatalogEmoji(markup) {
+    const match = new RegExp(`class="[^"]*\\b${CATALOG_EMOJI_CLASS}\\b[^"]*"[^>]*>([^<]+)`).exec(markup);
+    return match ? match[1] : null;
 }
 
 describe('Browser UI wiring', () => {
@@ -329,9 +335,8 @@ describe('Browser UI wiring', () => {
         expect(ui.toast.textContent).toBe('Emoji added.');
 
         const catalogButton = ui.emojiCatalog.children[0];
-        const catalogEmojiMatch = new RegExp(`${CATALOG_EMOJI_CLASS}">([^<]+)`).exec(catalogButton.innerHTML);
-        expect(catalogEmojiMatch).not.toBeNull();
-        const catalogEmoji = catalogEmojiMatch[1];
+        const catalogEmoji = extractCatalogEmoji(catalogButton.innerHTML);
+        expect(catalogEmoji).not.toBeNull();
         catalogButton.click();
         expect(ui.editor.value).toContain(`${catalogEmoji} `);
         expect(ui.toast.textContent).toContain('emoji inserted.');
