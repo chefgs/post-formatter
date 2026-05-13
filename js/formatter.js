@@ -2,8 +2,8 @@
  * Social Media Formatter — Core Formatting Logic
  * Works as a browser <script> and as a Node.js require() module.
  *
- * All Unicode character maps are authoritative here.
- * html/index.html and main.py must stay in sync with these maps.
+ * All Unicode character maps and pure text helpers are authoritative here.
+ * Browser UI files should import this module instead of copying these rules.
  */
 
 // ---------------------------------------------------------------------------
@@ -293,7 +293,7 @@ function clearFormatText(text) {
 }
 
 // ---------------------------------------------------------------------------
-// 8. EMOJI / SHORTCODE DATA
+// 8. EMOJI / AUDIENCE DATA
 // ---------------------------------------------------------------------------
 const buzzwordEmojiMap = {
     growth: '📈', sales: '💰', money: '💵', profit: '💸', team: '🤝',
@@ -311,10 +311,87 @@ const shortcodeMap = {
     ':chart:': '📈', ':target:': '🎯', ':brain:': '🧠', ':100:': '💯'
 };
 
+const popularEmojiList = [
+    { emoji: '🚀', label: 'Launch', audiences: ['linkedin', 'x', 'instagram', 'facebook'] },
+    { emoji: '🔥', label: 'Momentum', audiences: ['linkedin', 'x', 'instagram', 'facebook'] },
+    { emoji: '💡', label: 'Idea', audiences: ['linkedin', 'x', 'instagram', 'facebook'] },
+    { emoji: '🎯', label: 'Focus', audiences: ['linkedin', 'x', 'instagram', 'facebook'] },
+    { emoji: '📈', label: 'Growth', audiences: ['linkedin', 'x', 'facebook'] },
+    { emoji: '✅', label: 'Proof', audiences: ['linkedin', 'x', 'facebook'] },
+    { emoji: '🤝', label: 'Community', audiences: ['linkedin', 'facebook'] },
+    { emoji: '⚡', label: 'Energy', audiences: ['x', 'instagram'] },
+    { emoji: '📣', label: 'Announcement', audiences: ['linkedin', 'facebook'] },
+    { emoji: '📸', label: 'Visual', audiences: ['instagram', 'facebook'] },
+    { emoji: '🎉', label: 'Celebration', audiences: ['instagram', 'facebook'] },
+    { emoji: '💬', label: 'Conversation', audiences: ['facebook', 'linkedin'] }
+];
+
+const audienceProfiles = {
+    linkedin: {
+        label: 'LinkedIn',
+        charLimit: 3000,
+        tone: 'Professional and insight-led',
+        bullet: '•',
+        cta: 'What would you add?',
+        hashtagLimit: 3,
+        defaultEmoji: '💼'
+    },
+    x: {
+        label: 'X / Twitter',
+        charLimit: 280,
+        tone: 'Sharp and fast-moving',
+        bullet: '→',
+        cta: 'Thoughts?',
+        hashtagLimit: 2,
+        defaultEmoji: '⚡'
+    },
+    instagram: {
+        label: 'Instagram',
+        charLimit: 2200,
+        tone: 'Visual and uplifting',
+        bullet: '✨',
+        cta: 'Save this for later ✨',
+        hashtagLimit: 5,
+        defaultEmoji: '📸'
+    },
+    facebook: {
+        label: 'Facebook',
+        // Historical Facebook post limits are roughly ~63k chars, so keep the counter effectively non-restrictive.
+        charLimit: 63206,
+        tone: 'Conversational and community-driven',
+        bullet: '👉',
+        cta: 'Tag someone who should see this.',
+        hashtagLimit: 4,
+        defaultEmoji: '💬'
+    }
+};
+
+const audienceLayoutRules = {
+    linkedin: { openerLimit: 180, supportLines: 3 },
+    x: { openerLimit: 110, supportLines: 2 },
+    instagram: { openerLimit: 180, supportLines: 3 },
+    facebook: { openerLimit: 180, supportLines: 3 }
+};
+
+const stopWords = new Set([
+    'a', 'an', 'and', 'are', 'as', 'at', 'be', 'been', 'being', 'but', 'by',
+    'for', 'from', 'has', 'have', 'how', 'i', 'if', 'in', 'into', 'is', 'it',
+    'its', 'of', 'on', 'or', 'our', 'that', 'the', 'their', 'them', 'they',
+    'this', 'to', 'was', 'we', 'what', 'when', 'where', 'which', 'who', 'why',
+    'will', 'with', 'you', 'your'
+]);
+
 function autoEmojifyText(text) {
-    return text.replace(/\b(\w+)\b/g, (match) => {
+    const usedWords = new Set();
+    return text.replace(/\b(\w+)\b/g, (match, word, offset, source) => {
         const lower = match.toLowerCase();
-        return buzzwordEmojiMap[lower] ? `${match} ${buzzwordEmojiMap[lower]}` : match;
+        const emoji = buzzwordEmojiMap[lower];
+        if (!emoji) return match;
+        if (usedWords.has(lower)) return match;
+        const tail = source.slice(offset + word.length);
+        if (new RegExp(`^\\s+${escapeRegExp(emoji)}`).test(tail)) return match;
+        usedWords.add(lower);
+        return `${match} ${emoji}`;
     });
 }
 
@@ -324,6 +401,152 @@ function convertShortcodesText(text) {
         result = result.split(code).join(shortcodeMap[code]);
     }
     return result;
+}
+
+function normalizeText(text) {
+    return convertShortcodesText(clearFormatText(text || ''))
+        .replace(/\r\n/g, '\n')
+        .replace(/[ \t]+\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+
+function unique(list) {
+    return Array.from(new Set(list.filter(Boolean)));
+}
+
+function escapeRegExp(text) {
+    return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function splitIntoIdeas(text) {
+    const normalized = normalizeText(text);
+    if (!normalized) return [];
+
+    const paragraphs = normalized
+        .split(/\n+/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+    if (paragraphs.length > 1) return paragraphs;
+
+    return normalized
+        .split(/(?<=[.!?])\s+|\n+/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+}
+
+function truncateText(text, limit) {
+    if (text.length <= limit) return text;
+    return `${text.slice(0, Math.max(0, limit - 1)).trimEnd()}…`;
+}
+
+function toHashtag(word) {
+    const clean = String(word || '').replace(/[^a-z0-9]/gi, '');
+    if (!clean) return '';
+    return `#${clean.charAt(0).toUpperCase()}${clean.slice(1)}`;
+}
+
+function extractKeywords(text, limit = 6) {
+    const words = normalizeText(text).toLowerCase().match(/[a-z0-9]+/g) || [];
+    const seen = new Set();
+    const keywords = [];
+
+    for (const word of words) {
+        if (word.length < 3 && !buzzwordEmojiMap[word]) continue;
+        if (stopWords.has(word)) continue;
+        if (seen.has(word)) continue;
+        seen.add(word);
+        keywords.push(word);
+        if (keywords.length >= limit) break;
+    }
+
+    return keywords;
+}
+
+function suggestEmojisForText(text, limit = 6, audience = 'linkedin') {
+    const normalized = normalizeText(text);
+    const matches = [];
+
+    for (const keyword of extractKeywords(normalized, 24)) {
+        if (buzzwordEmojiMap[keyword]) matches.push(buzzwordEmojiMap[keyword]);
+    }
+
+    const profile = audienceProfiles[audience] || audienceProfiles.linkedin;
+    const fallbacks = popularEmojiList
+        .filter((item) => item.audiences.includes(audience))
+        .map((item) => item.emoji);
+
+    return unique([profile.defaultEmoji, ...matches, ...fallbacks]).slice(0, limit);
+}
+
+function generateHashtags(text, audience = 'linkedin') {
+    const profile = audienceProfiles[audience] || audienceProfiles.linkedin;
+    return extractKeywords(text, profile.hashtagLimit).map(toHashtag).filter(Boolean);
+}
+
+function formatBulletLines(lines, bullet, emojiSuggestions) {
+    return lines.map((line, index) => {
+        const emoji = emojiSuggestions[index + 1];
+        const prefix = emoji && bullet !== '•' ? `${emoji} ` : `${bullet} `;
+        return `${prefix}${line}`;
+    });
+}
+
+function formatPostForAudience(text, audience = 'linkedin') {
+    const selectedAudience = audienceProfiles[audience] ? audience : 'linkedin';
+    const profile = audienceProfiles[selectedAudience];
+    const layout = audienceLayoutRules[selectedAudience];
+    const ideas = splitIntoIdeas(text);
+    if (ideas.length === 0) return '';
+
+    const emojiSuggestions = suggestEmojisForText(text, 5, selectedAudience);
+    const hashtags = generateHashtags(text, selectedAudience);
+    const openerEmoji = emojiSuggestions[0] || profile.defaultEmoji;
+    const opener = `${openerEmoji} ${truncateText(ideas[0], layout.openerLimit)}`;
+    const support = formatBulletLines(
+        ideas.slice(1, layout.supportLines + 1),
+        profile.bullet,
+        emojiSuggestions
+    );
+
+    let lines = [];
+
+    if (selectedAudience === 'linkedin') {
+        lines = [opener];
+        if (support.length) lines.push('', ...support);
+        lines.push('', profile.cta);
+        if (hashtags.length) lines.push('', hashtags.join(' '));
+    } else if (selectedAudience === 'x') {
+        lines = [opener, ...support];
+        if (hashtags.length) lines.push(hashtags.join(' '));
+        lines.push(profile.cta);
+
+        while (lines.join('\n').length > profile.charLimit && support.length > 0) {
+            support.pop();
+            lines = [opener, ...support];
+            if (hashtags.length) lines.push(hashtags.slice(0, 1).join(' '));
+            lines.push(profile.cta);
+        }
+
+        let result = lines.filter(Boolean).join('\n');
+        if (result.length > profile.charLimit) {
+            result = truncateText(result, profile.charLimit);
+        }
+        return result;
+    } else if (selectedAudience === 'instagram') {
+        lines = [opener];
+        if (support.length) lines.push('', ...support);
+        lines.push('', profile.cta);
+        if (hashtags.length) lines.push('', hashtags.join(' '));
+    } else if (selectedAudience === 'facebook') {
+        lines = [opener];
+        if (support.length) lines.push('', ...support);
+        lines.push('', `${profile.cta} 😊`);
+        if (hashtags.length) lines.push('', hashtags.join(' '));
+    }
+
+    return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 // ---------------------------------------------------------------------------
@@ -343,8 +566,14 @@ function convertShortcodesText(text) {
         root.clearFormatText = exports.clearFormatText;
         root.buzzwordEmojiMap = exports.buzzwordEmojiMap;
         root.shortcodeMap = exports.shortcodeMap;
+        root.popularEmojiList = exports.popularEmojiList;
+        root.audienceProfiles = exports.audienceProfiles;
         root.autoEmojifyText = exports.autoEmojifyText;
         root.convertShortcodesText = exports.convertShortcodesText;
+        root.extractKeywords = exports.extractKeywords;
+        root.suggestEmojisForText = exports.suggestEmojisForText;
+        root.generateHashtags = exports.generateHashtags;
+        root.formatPostForAudience = exports.formatPostForAudience;
     }
 }(typeof window !== 'undefined' ? window : this, function () {
     return {
@@ -358,7 +587,13 @@ function convertShortcodesText(text) {
         clearFormatText,
         buzzwordEmojiMap,
         shortcodeMap,
+        popularEmojiList,
+        audienceProfiles,
         autoEmojifyText,
-        convertShortcodesText
+        convertShortcodesText,
+        extractKeywords,
+        suggestEmojisForText,
+        generateHashtags,
+        formatPostForAudience
     };
 }));

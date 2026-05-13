@@ -18,6 +18,8 @@
 # misc
 .DS_Store
 *.pem
+__pycache__/
+*.py[cod]
 
 # debug
 npm-debug.log*
@@ -27,6 +29,7 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
+.sesskey
 
 # vercel
 .vercel
