@@ -13,5 +13,9 @@ describe('main.py entrypoint', () => {
         expect(mainPy).toContain('INDEX_HTML = ROOT_DIR / "html" / "index.html"');
         expect(mainPy).toContain('app, rt = fast_app(key_fname="/tmp/post-formatter.sesskey")');
         expect(mainPy).toContain('return FileResponse(str(INDEX_HTML))');
+        expect(mainPy).toContain('@rt("/js/{filename}")');
+        expect(mainPy).toContain('"formatter.js": JS_DIR / "formatter.js"');
+        expect(mainPy).toContain('"app.js": JS_DIR / "app.js"');
+        expect(mainPy).toContain('media_type="application/javascript"');
     });
 });
