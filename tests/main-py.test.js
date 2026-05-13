@@ -12,10 +12,7 @@ describe('main.py entrypoint', () => {
 
         expect(mainPy).toContain('INDEX_HTML = ROOT_DIR / "html" / "index.html"');
         expect(mainPy).toContain('app, rt = fast_app(key_fname="/tmp/post-formatter.sesskey")');
-        expect(mainPy).toContain('def render_index_html():');
-        expect(mainPy).toContain('return HTMLResponse(render_index_html())');
-        expect(mainPy).toContain('<script src="../js/formatter.js"></script>');
-        expect(mainPy).toContain('<script src="../js/app.js"></script>');
+        expect(mainPy).toContain('return FileResponse(str(INDEX_HTML))');
         expect(mainPy).toContain('@rt("/js/{filename}")');
         expect(mainPy).toContain('"formatter.js": JS_DIR / "formatter.js"');
         expect(mainPy).toContain('"app.js": JS_DIR / "app.js"');

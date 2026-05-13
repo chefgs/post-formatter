@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from fasthtml.common import FileResponse, fast_app, serve
-from starlette.responses import HTMLResponse, PlainTextResponse
+from starlette.responses import PlainTextResponse
 
 
 ROOT_DIR = Path(__file__).resolve().parent
@@ -15,25 +15,14 @@ JS_FILES = {
 app, rt = fast_app(key_fname="/tmp/post-formatter.sesskey")
 
 
-def render_index_html():
-    html = INDEX_HTML.read_text(encoding="utf-8")
-    formatter_js = JS_FILES["formatter.js"].read_text(encoding="utf-8")
-    app_js = JS_FILES["app.js"].read_text(encoding="utf-8")
-    return (
-        html
-        .replace('<script src="../js/formatter.js"></script>', f"<script>\n{formatter_js}\n</script>")
-        .replace('<script src="../js/app.js"></script>', f"<script>\n{app_js}\n</script>")
-    )
-
-
 @rt("/")
 def index():
-    return HTMLResponse(render_index_html())
+    return FileResponse(str(INDEX_HTML))
 
 
 @rt("/html/index.html")
 def html_index():
-    return HTMLResponse(render_index_html())
+    return FileResponse(str(INDEX_HTML))
 
 
 @rt("/js/{filename}")
